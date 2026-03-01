@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ねこちゃんのメールボックス</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: sans-serif;
+      color: #333;
+      background-color: #fff0f5;
+      background-image: radial-gradient(circle, #ffb6c1 4px, transparent 4px);
+      background-size: 32px 32px;
+    }
+    .card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(2px);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 走るねこ */
+    .running-cat {
+      position: fixed;
+      bottom: 32px;
+      z-index: 0;
+      pointer-events: none;
+      animation: runCatX 18s linear infinite;
+    }
+    @keyframes runCatX {
+      0%   { left: -120px;              transform: scaleX(1); }
+      49%  { left: calc(100vw + 120px); transform: scaleX(1); }
+      50%  { left: calc(100vw + 120px); transform: scaleX(-1); }
+      99%  { left: -120px;              transform: scaleX(-1); }
+      100% { left: -120px;              transform: scaleX(1); }
+    }
+
+    /* ねこ本体 — 頭が右（進行方向）、しっぽが左 */
+    .cat {
+      position: relative; width: 110px; height: 64px;
+      animation: catBob 0.35s ease-in-out infinite alternate;
+    }
+    @keyframes catBob {
+      0%   { transform: translateY(0px); }
+      100% { transform: translateY(-5px); }
+    }
+
+    /* しっぽ（左端） */
+    .cat-tail {
+      position: absolute; top: 10px; left: 0px;
+      width: 22px; height: 12px;
+      border-top: 5px solid #ffccd5;
+      border-left: 5px solid #ffccd5;
+      border-radius: 10px 0 0 0;
+      animation: tailWag 0.5s ease-in-out infinite alternate;
+      transform-origin: right center;
+    }
+    @keyframes tailWag {
+      0%   { transform: rotate(-30deg); }
+      100% { transform: rotate(10deg); }
+    }
+
+    /* 胴体 */
+    .cat-body {
+      position: absolute; top: 18px; left: 14px;
+      width: 54px; height: 30px;
+      background: #ffccd5; border-radius: 15px;
+    }
+
+    /* 頭（右側・進行方向） */
+    .cat-head {
+      position: absolute; top: 2px; left: 58px;
+      width: 44px; height: 42px;
+      background: #ffccd5; border-radius: 50%;
+    }
+
+    /* 耳 */
+    .cat-ear {
+      position: absolute; top: -10px;
+      width: 0; height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 14px solid #ffccd5;
+    }
+    .cat-ear.l { left: 4px; }
+    .cat-ear.r { right: 4px; }
+    /* 耳の内側 */
+    .cat-ear::after {
+      content: '';
+      position: absolute; top: 3px; left: -4px;
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 8px solid #ffaabb;
+    }
+
+    /* 目 */
+    .cat-eye {
+      position: absolute; top: 14px;
+      width: 7px; height: 8px;
+      background: #444; border-radius: 50%;
+    }
+    .cat-eye::after {
+      content: '';
+      position: absolute; top: 1px; left: 1px;
+      width: 3px; height: 3px;
+      background: white; border-radius: 50%;
+    }
+    .cat-eye.l { left: 8px; }
+    .cat-eye.r { left: 24px; }
+
+    /* 鼻 */
+    .cat-nose {
+      position: absolute; top: 24px; left: 18px;
+      width: 6px; height: 4px;
+      background: #ff9aaa; border-radius: 50%;
+    }
+
+    /* ほっぺ */
+    .cat-blush {
+      position: absolute; top: 26px;
+      width: 10px; height: 6px;
+      background: rgba(255,150,150,0.35); border-radius: 50%;
+    }
+    .cat-blush.l { left: 3px; }
+    .cat-blush.r { right: 3px; }
+
+    /* ひげ */
+    .cat-whisker {
+      position: absolute; top: 27px;
+      width: 14px; height: 1.5px;
+      background: rgba(100,80,80,0.4);
+    }
+    .cat-whisker.tl { left: -12px; transform: rotate(-10deg); }
+    .cat-whisker.bl { left: -12px; transform: rotate(10deg); top: 31px; }
+    .cat-whisker.tr { right: -12px; transform: rotate(10deg); }
+    .cat-whisker.br { right: -12px; transform: rotate(-10deg); top: 31px; }
+
+    /* 足 */
+    .leg {
+      position: absolute;
+      width: 10px; height: 18px;
+      background: #ffccd5; border-radius: 0 0 5px 5px;
+      transform-origin: top center;
+    }
+    /* 前足（右・頭側） */
+    .leg.fl { left: 56px; top: 42px; animation: legF 0.35s ease-in-out infinite alternate; }
+    .leg.fr { left: 68px; top: 42px; animation: legF 0.35s ease-in-out infinite alternate-reverse; }
+    /* 後足（左・しっぽ側） */
+    .leg.bl { left: 22px; top: 42px; animation: legB 0.35s ease-in-out infinite alternate-reverse; }
+    .leg.br { left: 34px; top: 42px; animation: legB 0.35s ease-in-out infinite alternate; }
+
+    @keyframes legF {
+      0%   { transform: rotate(-35deg); }
+      100% { transform: rotate(35deg); }
+    }
+    @keyframes legB {
+      0%   { transform: rotate(-30deg); }
+      100% { transform: rotate(30deg); }
+    }
+
+    /* ボタンをどっと柄風に */
+
+    /* ヘッダーもどっと柄 */
+    header {
+      background-image: radial-gradient(circle, rgba(255,255,255,0.2) 1.5px, transparent 1.5px);
+      background-size: 16px 16px;
+    }
+    header { background: #ffb6c1; color: white; padding: 12px 24px; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .nav-buttons { display: flex; gap: 8px; }
+    .nav-btn { background: rgba(255,255,255,0.25); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: normal; }
+    .nav-btn:hover { background: rgba(255,255,255,0.4); }
+    .container { max-width: 900px; margin: 24px auto; padding: 0 16px 100px; }
+    .card { border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    h2 { font-size: 16px; margin-bottom: 12px; color: #555; }
+    input, textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-bottom: 8px; }
+    button { background: #ffb6c1; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #ff9aaa; }
+    .email-item { border-bottom: 1px solid #eee; padding: 12px 0; }
+    .email-item:last-child { border-bottom: none; }
+    .email-subject { font-weight: bold; font-size: 14px; }
+    .email-from { color: #666; font-size: 13px; margin: 2px 0; }
+    .email-snippet { color: #888; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .email-date { color: #aaa; font-size: 12px; float: right; }
+    #status { margin-top: 8px; font-size: 13px; color: #ffb6c1; }
+    .email-subject { font-weight: bold; font-size: 14px; cursor: pointer; color: #333; }
+    .email-subject:hover { color: #ffb6c1; text-decoration: underline; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; }
+    .modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+    .modal { background: white; border-radius: 8px; width: 90%; max-width: 700px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; }
+    .modal-header h3 { font-size: 15px; margin-bottom: 6px; }
+    .modal-meta { font-size: 12px; color: #888; }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; font-size: 14px; line-height: 1.6; }
+    .modal-close { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa; padding: 0; }
+    .search-row { display: flex; gap: 8px; }
+    .search-row input { margin-bottom: 0; }
+    input[type="radio"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffb6c1;
+      border-radius: 2px;
+      vertical-align: middle;
+      cursor: pointer;
+      position: relative;
+    }
+    input[type="radio"]:checked {
+      background: #ffb6c1;
+    }
+    input[type="radio"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 3px;
+      width: 4px;
+      height: 8px;
+      border: 2px solid white;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="running-cat">
+    <div class="cat">
+      <div class="cat-tail"></div>
+      <div class="cat-body"></div>
+      <div class="cat-head">
+        <div class="cat-ear l"></div>
+        <div class="cat-ear r"></div>
+        <div class="cat-eye l"></div>
+        <div class="cat-eye r"></div>
+        <div class="cat-nose"></div>
+        <div class="cat-blush l"></div>
+        <div class="cat-blush r"></div>
+        <div class="cat-whisker tl"></div>
+        <div class="cat-whisker bl"></div>
+        <div class="cat-whisker tr"></div>
+        <div class="cat-whisker br"></div>
+      </div>
+      <div class="leg fl"></div>
+      <div class="leg fr"></div>
+      <div class="leg bl"></div>
+      <div class="leg br"></div>
+    </div>
+  </div>
+
+  <!-- 下書き一覧モーダル -->
+  <div class="modal-overlay" id="draft-modal" onclick="closeDraftModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <button class="modal-close" onclick="document.getElementById('draft-modal').classList.remove('open')">×</button>
+        <h3>💾 下書き一覧</h3>
+      </div>
+      <div class="modal-body" id="draft-list"></div>
+    </div>
+  </div>
+
+  <!-- メール詳細モーダル -->
+  <div class="modal-overlay" id="modal" onclick="closeModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">×</button>
+        <h3 id="modal-subject"></h3>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <header>
+    <span>🐱 ねこちゃんのメールボックス</span>
+    <div class="nav-buttons">
+      <button class="nav-btn" onclick="document.getElementById('section-inbox').scrollIntoView({behavior:'smooth'})">受信トレイ</button>
+      <button class="nav-btn" onclick="document.getElementById('section-search').scrollIntoView({behavior:'smooth'})">検索</button>
+      <button class="nav-btn" onclick="document.getElementById('section-send').scrollIntoView({behavior:'smooth'})">送信</button>
+      <button class="nav-btn" onclick="openDraftList()">下書き一覧</button>
+    </div>
+  </header>
+  <div class="container">
+
+    <!-- メール一覧 -->
+    <div class="card" id="section-inbox">
+      <h2>受信トレイ</h2>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <button onclick="loadEmails(5)">更新</button>
+        <label style="font-size:14px;cursor:pointer;">
+          <input type="radio" name="filter" value="all" checked onchange="loadEmails(5)"> すべて
+        </label>
+        <label style="font-size:14px;cursor:pointer;">
+          <input type="radio" name="filter" value="unread" onchange="loadEmails(5)"> 未読
+        </label>
+        <label style="font-size:14px;cursor:pointer;">
+          <input type="radio" name="filter" value="read" onchange="loadEmails(5)"> 既読
+        </label>
+      </div>
+      <div id="email-list" style="margin-top:12px;"></div>
+      <div id="show-all-btn" style="margin-top:12px;display:none;">
+        <button onclick="loadEmails()">一覧を見る</button>
+      </div>
+    </div>
+
+    <!-- メール検索 -->
+    <div class="card" id="section-search">
+      <h2>メール検索</h2>
+      <div class="search-row">
+        <input type="text" id="search-query" placeholder="検索キーワード">
+        <button onclick="searchEmails()">検索</button>
+      </div>
+      <div id="search-results" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- メール送信 -->
+    <div class="card" id="section-send">
+      <h2>メール送信</h2>
+      <input type="text" id="send-to" placeholder="To（宛先）" list="contacts-list" autocomplete="off">
+      <input type="text" id="send-cc" placeholder="Cc（他の受信者に見える同報）" list="contacts-list" autocomplete="off">
+      <input type="text" id="send-bcc" placeholder="Bcc（他の受信者に見えない同報）" list="contacts-list" autocomplete="off">
+      <datalist id="contacts-list"></datalist>
+      <input type="text" id="send-subject" placeholder="件名">
+      <textarea id="send-body" rows="5" placeholder="本文"></textarea>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <button onclick="sendEmail()">送信</button>
+        <button onclick="saveDraft()" style="background:#f0f0f0;color:#555;">💾 下書き保存</button>
+        <button onclick="proofread()" style="background:#f0f0f0;color:#555;">✨ AIで推敲</button>
+      </div>
+      <div id="proofread-box" style="display:none;border:1px solid #ffb6c1;border-radius:4px;padding:12px;background:#fff9fb;">
+        <div style="font-size:12px;color:#ffb6c1;margin-bottom:8px;font-weight:bold;">✨ AI推敲結果</div>
+        <div id="proofread-result" style="font-size:14px;white-space:pre-wrap;line-height:1.6;"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button onclick="acceptProofread()">採用する</button>
+          <button onclick="document.getElementById('proofread-box').style.display='none'" style="background:#f0f0f0;color:#555;">閉じる</button>
+        </div>
+      </div>
+      <div id="status"></div>
+    </div>
+
+  </div>
+
+  <script>
+    function renderEmails(emails, containerId) {
+      const el = document.getElementById(containerId);
+      if (!emails.length) { el.innerHTML = '<p style="color:#aaa">メールなし</p>'; return; }
+      el.innerHTML = emails.map(e => `
+        <div class="email-item">
+          <span class="email-date">${new Date(e.date).toLocaleDateString('ja-JP')}</span>
+          <div class="email-subject" onclick="openEmail('${e.id}')">${e.subject || '(件名なし)'}</div>
+          <div class="email-from">${e.from}</div>
+          <div class="email-snippet">${e.snippet}</div>
+        </div>
+      `).join('');
+    }
+
+    async function openEmail(id) {
+      document.getElementById('modal-subject').textContent = '読み込み中...';
+      document.getElementById('modal-meta').textContent = '';
+      document.getElementById('modal-body').innerHTML = '';
+      document.getElementById('modal').classList.add('open');
+
+      const res = await fetch(`/api/emails/${id}`);
+      const email = await res.json();
+
+      document.getElementById('modal-subject').textContent = email.subject || '(件名なし)';
+      document.getElementById('modal-meta').innerHTML =
+        `<span>From: ${email.from}</span> &nbsp;|&nbsp; <span>${new Date(email.date).toLocaleString('ja-JP')}</span>`;
+
+      const body = document.getElementById('modal-body');
+      if (email.mimeType?.includes('html') || email.body?.includes('<')) {
+        const iframe = document.createElement('iframe');
+        iframe.style = 'width:100%;height:500px;border:none;';
+        iframe.srcdoc = email.body;
+        body.innerHTML = '';
+        body.appendChild(iframe);
+      } else {
+        body.textContent = email.body || '(本文なし)';
+      }
+    }
+
+    function closeModal(e) {
+      if (e.target === document.getElementById('modal')) {
+        document.getElementById('modal').classList.remove('open');
+      }
+    }
+
+    async function loadEmails(limit) {
+      document.getElementById('email-list').innerHTML = '読み込み中...';
+      const filter = document.querySelector('input[name="filter"]:checked')?.value || 'all';
+      const params = new URLSearchParams();
+      if (limit) params.set('limit', limit);
+      if (filter !== 'all') params.set('filter', filter);
+      const res = await fetch(`/api/emails?${params}`);
+      const emails = await res.json();
+      renderEmails(emails, 'email-list');
+      document.getElementById('show-all-btn').style.display = limit ? 'block' : 'none';
+    }
+
+    async function searchEmails() {
+      const q = document.getElementById('search-query').value.trim();
+      if (!q) return;
+      document.getElementById('search-results').innerHTML = '検索中...';
+      const res = await fetch(`/api/emails/search?q=${encodeURIComponent(q)}`);
+      const emails = await res.json();
+      renderEmails(emails, 'search-results');
+    }
+
+    async function sendEmail() {
+      const to  = document.getElementById('send-to').value.trim();
+      const cc  = document.getElementById('send-cc').value.trim();
+      const bcc = document.getElementById('send-bcc').value.trim();
+      const subject = document.getElementById('send-subject').value.trim();
+      const body = document.getElementById('send-body').value.trim();
+      const status = document.getElementById('status');
+
+      if (!to || !subject || !body) { status.textContent = '全ての項目を入力してください'; return; }
+
+      status.textContent = '送信中...';
+      const res = await fetch('/api/emails/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, cc, bcc, subject, body }),
+      });
+
+      if (res.ok) {
+        status.textContent = '送信しました！';
+        document.getElementById('send-to').value = '';
+        document.getElementById('send-cc').value = '';
+        document.getElementById('send-bcc').value = '';
+        document.getElementById('send-subject').value = '';
+        document.getElementById('send-body').value = '';
+      } else {
+        const err = await res.json();
+        status.textContent = `エラー: ${err.error}`;
+      }
+    }
+
+    async function proofread() {
+      const subject = document.getElementById('send-subject').value.trim();
+      const body = document.getElementById('send-body').value.trim();
+      if (!body) { document.getElementById('status').textContent = '本文を入力してください'; return; }
+
+      const box = document.getElementById('proofread-box');
+      const result = document.getElementById('proofread-result');
+      box.style.display = 'block';
+      result.textContent = '推敲中...';
+
+      const res = await fetch('/api/proofread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, body }),
+      });
+
+      const data = await res.json();
+      result.textContent = res.ok ? data.result : `エラー: ${data.error}`;
+    }
+
+    function acceptProofread() {
+      const result = document.getElementById('proofread-result').textContent;
+      document.getElementById('send-body').value = result;
+      document.getElementById('proofread-box').style.display = 'none';
+    }
+
+    async function saveDraft() {
+      const to = document.getElementById('send-to').value.trim();
+      const cc = document.getElementById('send-cc').value.trim();
+      const bcc = document.getElementById('send-bcc').value.trim();
+      const subject = document.getElementById('send-subject').value.trim();
+      const body = document.getElementById('send-body').value.trim();
+      const status = document.getElementById('status');
+      status.textContent = '保存中...';
+      const res = await fetch('/api/drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, cc, bcc, subject, body }),
+      });
+      status.textContent = res.ok ? '下書きを保存しました' : '保存に失敗しました';
+    }
+
+    async function openDraftList() {
+      document.getElementById('draft-modal').classList.add('open');
+      document.getElementById('draft-list').innerHTML = '読み込み中...';
+      const res = await fetch('/api/drafts');
+      const drafts = await res.json();
+      if (!drafts.length) {
+        document.getElementById('draft-list').innerHTML = '<p style="color:#aaa">下書きなし</p>';
+        return;
+      }
+      document.getElementById('draft-list').innerHTML = drafts.map(d => `
+        <div class="email-item" style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="flex:1;cursor:pointer;" onclick="loadDraft('${d.id}')">
+            <div class="email-subject">${d.subject || '(件名なし)'}</div>
+            <div class="email-from">${d.to || '(宛先なし)'}</div>
+            <div class="email-snippet">${d.snippet}</div>
+          </div>
+          <button onclick="deleteDraft('${d.id}')" style="background:#f0f0f0;color:#aaa;padding:4px 10px;font-size:12px;margin-left:8px;">削除</button>
+        </div>
+      `).join('');
+    }
+
+    async function loadDraft(id) {
+      const res = await fetch(`/api/drafts/${id}`);
+      const d = await res.json();
+      document.getElementById('send-to').value = d.to || '';
+      document.getElementById('send-cc').value = d.cc || '';
+      document.getElementById('send-bcc').value = d.bcc || '';
+      document.getElementById('send-subject').value = d.subject || '';
+      document.getElementById('send-body').value = d.body || '';
+      document.getElementById('draft-modal').classList.remove('open');
+      document.getElementById('section-send').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    async function deleteDraft(id) {
+      await fetch(`/api/drafts/${id}`, { method: 'DELETE' });
+      openDraftList();
+    }
+
+    function closeDraftModal(e) {
+      if (e.target === document.getElementById('draft-modal')) {
+        document.getElementById('draft-modal').classList.remove('open');
+      }
+    }
+
+    loadEmails(5);
+
+    // 連絡先をdatalistに読み込む
+    fetch('/api/contacts').then(r => r.json()).then(contacts => {
+      const list = document.getElementById('contacts-list');
+      list.innerHTML = contacts.map(c => `<option value="${c}">`).join('');
+    });
+  </script>
+</body>
+</html>
