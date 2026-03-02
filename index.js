@@ -19,8 +19,14 @@ const oauth2Client = new google.auth.OAuth2(
   process.env.REDIRECT_URI
 );
 
-// 保存済みトークンを読み込む
-if (fs.existsSync('token.json')) {
+// 保存済みトークンを読み込む（環境変数 or token.json）
+if (process.env.GMAIL_REFRESH_TOKEN) {
+  oauth2Client.setCredentials({
+    access_token: process.env.GMAIL_ACCESS_TOKEN,
+    refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+    token_type: 'Bearer',
+  });
+} else if (fs.existsSync('token.json')) {
   const tokens = JSON.parse(fs.readFileSync('token.json'));
   oauth2Client.setCredentials(tokens);
 }
