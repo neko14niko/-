@@ -372,6 +372,11 @@ app.delete('/api/drafts/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`サーバー起動中: http://localhost:${PORT}`);
-});
+// ローカル開発時のみサーバー起動
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`サーバー起動中: http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
