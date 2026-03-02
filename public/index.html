@@ -341,15 +341,20 @@
   </div>
 
   <script>
+    // HTMLエスケープ（XSS対策）
+    function esc(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     function renderEmails(emails, containerId) {
       const el = document.getElementById(containerId);
       if (!emails.length) { el.innerHTML = '<p style="color:#aaa">メールなし</p>'; return; }
       el.innerHTML = emails.map(e => `
         <div class="email-item">
-          <span class="email-date">${new Date(e.date).toLocaleDateString('ja-JP')}</span>
-          <div class="email-subject" onclick="openEmail('${e.id}')">${e.subject || '(件名なし)'}</div>
-          <div class="email-from">${e.from}</div>
-          <div class="email-snippet">${e.snippet}</div>
+          <span class="email-date">${esc(new Date(e.date).toLocaleDateString('ja-JP'))}</span>
+          <div class="email-subject" onclick="openEmail('${esc(e.id)}')">${esc(e.subject) || '(件名なし)'}</div>
+          <div class="email-from">${esc(e.from)}</div>
+          <div class="email-snippet">${esc(e.snippet)}</div>
         </div>
       `).join('');
     }
@@ -365,12 +370,13 @@
 
       document.getElementById('modal-subject').textContent = email.subject || '(件名なし)';
       document.getElementById('modal-meta').innerHTML =
-        `<span>From: ${email.from}</span> &nbsp;|&nbsp; <span>${new Date(email.date).toLocaleString('ja-JP')}</span>`;
+        `<span>From: ${esc(email.from)}</span> &nbsp;|&nbsp; <span>${esc(new Date(email.date).toLocaleString('ja-JP'))}</span>`;
 
       const body = document.getElementById('modal-body');
       if (email.mimeType?.includes('html') || email.body?.includes('<')) {
         const iframe = document.createElement('iframe');
         iframe.style = 'width:100%;height:500px;border:none;';
+        iframe.sandbox = 'allow-same-origin';
         iframe.srcdoc = email.body;
         body.innerHTML = '';
         body.appendChild(iframe);
@@ -489,12 +495,12 @@
       }
       document.getElementById('draft-list').innerHTML = drafts.map(d => `
         <div class="email-item" style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div style="flex:1;cursor:pointer;" onclick="loadDraft('${d.id}')">
-            <div class="email-subject">${d.subject || '(件名なし)'}</div>
-            <div class="email-from">${d.to || '(宛先なし)'}</div>
-            <div class="email-snippet">${d.snippet}</div>
+          <div style="flex:1;cursor:pointer;" onclick="loadDraft('${esc(d.id)}')">
+            <div class="email-subject">${esc(d.subject) || '(件名なし)'}</div>
+            <div class="email-from">${esc(d.to) || '(宛先なし)'}</div>
+            <div class="email-snippet">${esc(d.snippet)}</div>
           </div>
-          <button onclick="deleteDraft('${d.id}')" style="background:#f0f0f0;color:#aaa;padding:4px 10px;font-size:12px;margin-left:8px;">削除</button>
+          <button onclick="deleteDraft('${esc(d.id)}')" style="background:#f0f0f0;color:#aaa;padding:4px 10px;font-size:12px;margin-left:8px;">削除</button>
         </div>
       `).join('');
     }
