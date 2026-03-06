@@ -11,7 +11,6 @@ const app = express();
 const PORT = 56627;
 
 app.use(express.json());
-app.use(express.static('public'));
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
@@ -31,6 +30,13 @@ if (process.env.GMAIL_REFRESH_TOKEN) {
   oauth2Client.setCredentials(tokens);
 }
 
+// トークンが更新されたら自動保存
+oauth2Client.on('tokens', (tokens) => {
+  const existing = fs.existsSync('token.json') ? JSON.parse(fs.readFileSync('token.json')) : {};
+  const updated = { ...existing, ...tokens };
+  fs.writeFileSync('token.json', JSON.stringify(updated, null, 2));
+});
+
 const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
 // 認証URL生成
@@ -42,13 +48,11 @@ app.get('/auth', (req, res) => {
   res.redirect(url);
 });
 
-// OAuthコールバック
-app.get('/', async (req, res) => {
+// OAuthコールバック（staticより前に処理）
+app.get('/', async (req, res, next) => {
   const { code } = req.query;
 
-  if (!code) {
-    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  }
+  if (!code) return next();
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
@@ -60,6 +64,8 @@ app.get('/', async (req, res) => {
     res.status(500).send('トークンの取得に失敗しました');
   }
 });
+
+app.use(express.static('public'));
 
 // メール一覧取得
 app.get('/api/emails', async (req, res) => {
