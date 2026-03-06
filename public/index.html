@@ -217,6 +217,35 @@
     }
     .memo-saved { font-size: 11px; color: #bbb; margin-top: 4px; text-align: right; }
 
+    /* カレンダーパネル */
+    .cal-panel {
+      position: fixed;
+      top: 60px;
+      right: 12px;
+      width: 400px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(2px);
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      padding: 24px;
+      z-index: 10;
+      display: none;
+    }
+    @media (min-width: 1360px) {
+      .cal-panel { display: block; }
+    }
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .cal-nav span { font-size: 26px; font-weight: bold; color: #ffb6c1; }
+    .cal-nav button { background: none; border: none; color: #ffb6c1; font-size: 32px; cursor: pointer; padding: 0 8px; }
+    .cal-nav button:hover { color: #ff9aaa; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .cal-dow { font-size: 20px; color: #aaa; padding: 4px 0; }
+    .cal-day { font-size: 24px; padding: 6px 0; border-radius: 50%; cursor: default; }
+    .cal-day.today { background: #ffb6c1; color: white; font-weight: bold; }
+    .cal-day.empty { }
+    .cal-day.sun { color: #ff9aaa; }
+    .cal-day.sat { color: #99aaff; }
+
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; }
     .modal-overlay.open { display: flex; align-items: center; justify-content: center; }
     .modal { background: white; border-radius: 8px; width: 90%; max-width: 700px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -255,6 +284,16 @@
   </style>
 </head>
 <body>
+  <!-- カレンダーパネル -->
+  <div class="cal-panel">
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <span id="cal-title"></span>
+      <button onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
   <!-- メモパネル -->
   <div class="memo-panel">
     <h2>📝 メモ</h2>
@@ -565,6 +604,37 @@
         document.getElementById('draft-modal').classList.remove('open');
       }
     }
+
+    // カレンダー
+    let calYear, calMonth;
+    const today = new Date();
+    calYear = today.getFullYear();
+    calMonth = today.getMonth();
+
+    function renderCalendar() {
+      const dows = ['日','月','火','水','木','金','土'];
+      const firstDay = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      document.getElementById('cal-title').textContent = `${calYear}年${calMonth + 1}月`;
+      const grid = document.getElementById('cal-grid');
+      grid.innerHTML = dows.map((d, i) => `<div class="cal-dow${i===0?' sun':i===6?' sat':''}">${d}</div>`).join('');
+      for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="cal-day empty"></div>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+        const dow = (firstDay + d - 1) % 7;
+        const cls = ['cal-day', isToday ? 'today' : '', dow === 0 ? 'sun' : dow === 6 ? 'sat' : ''].filter(Boolean).join(' ');
+        grid.innerHTML += `<div class="${cls}">${d}</div>`;
+      }
+    }
+
+    function changeMonth(dir) {
+      calMonth += dir;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      if (calMonth < 0)  { calMonth = 11; calYear--; }
+      renderCalendar();
+    }
+
+    renderCalendar();
 
     // メモの読み込みと自動保存
     const memoText = document.getElementById('memo-text');
