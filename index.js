@@ -108,6 +108,7 @@ app.get('/api/emails', async (req, res) => {
           from: get('From'),
           date: get('Date'),
           snippet: msg.snippet,
+          unread: msg.labelIds?.includes('UNREAD') ?? false,
         };
       })
     );
@@ -263,6 +264,51 @@ ${body}`,
     res.json({ result: completion.choices[0].message.content });
   } catch (err) {
     console.error('AI推敲エラー:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 既読/未読の切り替え
+app.post('/api/emails/:id/read', async (req, res) => {
+  const { unread } = req.body;
+  try {
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: req.params.id,
+      requestBody: unread
+        ? { addLabelIds: ['UNREAD'] }
+        : { removeLabelIds: ['UNREAD'] },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('既読/未読エラー:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// メール削除（ゴミ箱）
+app.post('/api/emails/:id/trash', async (req, res) => {
+  try {
+    await gmail.users.messages.trash({ userId: 'me', id: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('削除エラー:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// アーカイブ（受信トレイから除外）
+app.post('/api/emails/:id/archive', async (req, res) => {
+  try {
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: req.params.id,
+      requestBody: { removeLabelIds: ['INBOX'] },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('アーカイブエラー:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

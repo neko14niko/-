@@ -179,10 +179,18 @@
     button:hover { background: #ff9aaa; }
     .email-item { border-bottom: 1px solid #eee; padding: 12px 0; }
     .email-item:last-child { border-bottom: none; }
+    .email-item.unread { background: #fff5f7; border-radius: 4px; padding: 12px 8px; }
     .email-subject { font-weight: bold; font-size: 14px; }
+    .email-item.unread .email-subject { color: #e05080; }
     .email-from { color: #666; font-size: 13px; margin: 2px 0; }
     .email-snippet { color: #888; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .email-date { color: #aaa; font-size: 12px; float: right; }
+    .email-item-check { width: 16px; height: 16px; accent-color: #ffb6c1; cursor: pointer; flex-shrink: 0; margin-right: 8px; vertical-align: middle; }
+    .email-actions { margin-top: 6px; display: flex; gap: 6px; }
+    .email-actions button { font-size: 11px; padding: 2px 10px; background: #f0f0f0; color: #555; border: none; border-radius: 4px; cursor: pointer; }
+    .email-actions button:hover { background: #e0e0e0; }
+    .email-actions .btn-trash { background: #ffe0e6; color: #c0404a; }
+    .email-actions .btn-trash:hover { background: #ffc8d0; }
     #status { margin-top: 8px; font-size: 13px; color: #ffb6c1; }
     .email-subject { font-weight: bold; font-size: 14px; cursor: pointer; color: #333; }
     .email-subject:hover { color: #ffb6c1; text-decoration: underline; }
@@ -252,31 +260,8 @@
     .modal-close { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa; padding: 0; }
     .search-row { display: flex; gap: 8px; }
     .search-row input { margin-bottom: 0; }
-    input[type="radio"] {
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #ffb6c1;
-      border-radius: 2px;
-      vertical-align: middle;
-      cursor: pointer;
-      position: relative;
-    }
-    input[type="radio"]:checked {
-      background: #ffb6c1;
-    }
-    input[type="radio"]:checked::after {
-      content: '';
-      position: absolute;
-      top: 1px;
-      left: 3px;
-      width: 4px;
-      height: 8px;
-      border: 2px solid white;
-      border-top: none;
-      border-left: none;
-      transform: rotate(45deg);
-    }
+    .filter-btn { background: #f0f0f0; color: #555; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .filter-btn.active { background: #ffb6c1; color: white; }
   </style>
 </head>
 <body>
@@ -336,11 +321,38 @@
   <div class="modal-overlay" id="modal" onclick="closeModal(event)">
     <div class="modal">
       <div class="modal-header">
-        <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">×</button>
+        <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open');document.getElementById('reply-area').style.display='none';">×</button>
         <h3 id="modal-subject"></h3>
         <div class="modal-meta" id="modal-meta"></div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <button id="toggle-read-btn" onclick="toggleRead()" style="font-size:12px;padding:4px 12px;background:#f0f0f0;color:#555;"></button>
+          <button onclick="replyEmail()" style="font-size:12px;padding:4px 12px;background:#ffb6c1;color:white;">返信</button>
+          <button onclick="archiveEmail()" style="font-size:12px;padding:4px 12px;background:#f0f0f0;color:#555;">アーカイブ</button>
+          <button onclick="trashEmail()" style="font-size:12px;padding:4px 12px;background:#ffe0e6;color:#c0404a;">削除</button>
+        </div>
       </div>
       <div class="modal-body" id="modal-body"></div>
+      <div id="reply-area" style="display:none;border-top:1px solid #eee;padding:16px 20px;display:none;">
+        <div style="font-size:12px;color:#ffb6c1;font-weight:bold;margin-bottom:8px;">✉ 返信</div>
+        <input type="text" id="reply-to" placeholder="To" style="margin-bottom:6px;">
+        <input type="text" id="reply-subject" placeholder="件名" style="margin-bottom:6px;">
+        <textarea id="reply-body" rows="5" placeholder="本文" style="margin-bottom:8px;"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="sendReply()">送信</button>
+          <button onclick="saveReplyDraft()" style="background:#f0f0f0;color:#555;">💾 下書き保存</button>
+          <button onclick="proofreadReply()" style="background:#f0f0f0;color:#555;">✨ AIで推敲</button>
+          <button onclick="document.getElementById('reply-area').style.display='none'" style="background:#f0f0f0;color:#555;">閉じる</button>
+        </div>
+        <div id="reply-proofread-box" style="display:none;border:1px solid #ffb6c1;border-radius:4px;padding:12px;background:#fff9fb;margin-top:8px;">
+          <div style="font-size:12px;color:#ffb6c1;margin-bottom:8px;font-weight:bold;">✨ AI推敲結果</div>
+          <div id="reply-proofread-result" style="font-size:14px;white-space:pre-wrap;line-height:1.6;"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button onclick="acceptReplyProofread()">採用する</button>
+            <button onclick="document.getElementById('reply-proofread-box').style.display='none'" style="background:#f0f0f0;color:#555;">閉じる</button>
+          </div>
+        </div>
+        <div id="reply-status" style="font-size:13px;color:#ffb6c1;margin-top:6px;"></div>
+      </div>
     </div>
   </div>
 
@@ -358,17 +370,13 @@
     <!-- メール一覧 -->
     <div class="card" id="section-inbox">
       <h2>受信トレイ</h2>
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button onclick="loadEmails(5)">更新</button>
-        <label style="font-size:14px;cursor:pointer;">
-          <input type="radio" name="filter" value="all" checked onchange="loadEmails(5)"> すべて
-        </label>
-        <label style="font-size:14px;cursor:pointer;">
-          <input type="radio" name="filter" value="unread" onchange="loadEmails(5)"> 未読
-        </label>
-        <label style="font-size:14px;cursor:pointer;">
-          <input type="radio" name="filter" value="read" onchange="loadEmails(5)"> 既読
-        </label>
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">すべて</button>
+        <button class="filter-btn" data-filter="unread" onclick="setFilter('unread')">未読</button>
+        <button class="filter-btn" data-filter="read" onclick="setFilter('read')">既読</button>
+        <button onclick="archiveChecked()">アーカイブ</button>
+        <button onclick="trashChecked()" style="background:#ff8fa3;">削除</button>
       </div>
       <div id="email-list" style="margin-top:12px;"></div>
       <div id="show-all-btn" style="margin-top:12px;display:none;">
@@ -423,23 +431,45 @@
       const el = document.getElementById(containerId);
       if (!emails.length) { el.innerHTML = '<p style="color:#aaa">メールなし</p>'; return; }
       el.innerHTML = emails.map(e => `
-        <div class="email-item">
-          <span class="email-date">${esc(new Date(e.date).toLocaleDateString('ja-JP'))}</span>
-          <div class="email-subject" onclick="openEmail('${esc(e.id)}')">${esc(e.subject) || '(件名なし)'}</div>
-          <div class="email-from">${esc(e.from)}</div>
-          <div class="email-snippet">${esc(e.snippet)}</div>
+        <div class="email-item${e.unread ? ' unread' : ''}" data-id="${esc(e.id)}" style="position:relative;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:flex-start;gap:8px;">
+            <input type="checkbox" class="email-item-check" data-id="${esc(e.id)}" onclick="event.stopPropagation()">
+            <div style="flex:1;min-width:0;">
+              <span class="email-date">${esc(new Date(e.date).toLocaleDateString('ja-JP'))}</span>
+              <div class="email-subject" onclick="openEmail('${esc(e.id)}')">${esc(e.subject) || '(件名なし)'}</div>
+              <div class="email-from">${esc(e.from)}</div>
+              <div class="email-snippet">${esc(e.snippet)}</div>
+            </div>
+          </div>
+          <div class="email-actions">
+            <button onclick="archiveEmailFromList('${esc(e.id)}',event)">アーカイブ</button>
+            <button onclick="trashEmailFromList('${esc(e.id)}',event)" class="btn-trash">削除</button>
+          </div>
         </div>
       `).join('');
     }
+
+    let currentEmailId = null;
+    let currentEmailUnread = false;
+    let currentEmailFrom = '';
+    let currentEmailSubject = '';
 
     async function openEmail(id) {
       document.getElementById('modal-subject').textContent = '読み込み中...';
       document.getElementById('modal-meta').textContent = '';
       document.getElementById('modal-body').innerHTML = '';
+      document.getElementById('toggle-read-btn').textContent = '';
       document.getElementById('modal').classList.add('open');
+
+      currentEmailId = id;
+      currentEmailUnread = document.querySelector(`.email-item[data-id="${id}"]`)?.classList.contains('unread') ?? false;
+      document.getElementById('toggle-read-btn').textContent = currentEmailUnread ? '既読にする' : '未読にする';
 
       const res = await fetch(`/api/emails/${id}`);
       const email = await res.json();
+
+      currentEmailFrom = email.from;
+      currentEmailSubject = email.subject || '';
 
       document.getElementById('modal-subject').textContent = email.subject || '(件名なし)';
       document.getElementById('modal-meta').innerHTML =
@@ -456,17 +486,178 @@
       } else {
         body.textContent = email.body || '(本文なし)';
       }
+
+      // 未読なら自動的に既読にする
+      if (currentEmailUnread) {
+        await fetch(`/api/emails/${id}/read`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unread: false }),
+        });
+        currentEmailUnread = false;
+        document.getElementById('toggle-read-btn').textContent = '未読にする';
+        const item = document.querySelector(`.email-item[data-id="${id}"]`);
+        if (item) item.classList.remove('unread');
+      }
+    }
+
+    function setFilter(value) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === value));
+      loadEmails(5);
+    setInterval(() => loadEmails(5), 30 * 60 * 1000);
+    }
+
+    function getCheckedIds() {
+      return [...document.querySelectorAll('.email-item-check:checked')].map(el => el.dataset.id);
+    }
+
+    async function archiveChecked() {
+      const ids = getCheckedIds();
+      if (!ids.length) return;
+      await Promise.all(ids.map(id => fetch(`/api/emails/${id}/archive`, { method: 'POST' })));
+      ids.forEach(id => document.querySelector(`.email-item[data-id="${id}"]`)?.remove());
+    }
+
+    async function trashChecked() {
+      const ids = getCheckedIds();
+      if (!ids.length) return;
+      if (!confirm(`${ids.length}件のメールをゴミ箱に移動しますか？`)) return;
+      await Promise.all(ids.map(id => fetch(`/api/emails/${id}/trash`, { method: 'POST' })));
+      ids.forEach(id => document.querySelector(`.email-item[data-id="${id}"]`)?.remove());
+    }
+
+    async function archiveEmailFromList(id, e) {
+      e.stopPropagation();
+      const res = await fetch(`/api/emails/${id}/archive`, { method: 'POST' });
+      if (res.ok) document.querySelector(`.email-item[data-id="${id}"]`)?.remove();
+    }
+
+    async function trashEmailFromList(id, e) {
+      e.stopPropagation();
+      if (!confirm('このメールをゴミ箱に移動しますか？')) return;
+      const res = await fetch(`/api/emails/${id}/trash`, { method: 'POST' });
+      if (res.ok) document.querySelector(`.email-item[data-id="${id}"]`)?.remove();
+    }
+
+    function replyEmail() {
+      const match = currentEmailFrom.match(/<(.+?)>/);
+      const to = match ? match[1] : currentEmailFrom;
+      const subject = currentEmailSubject.startsWith('Re:') ? currentEmailSubject : `Re: ${currentEmailSubject}`;
+      document.getElementById('reply-to').value = to;
+      document.getElementById('reply-subject').value = subject;
+      document.getElementById('reply-body').value = '';
+      document.getElementById('reply-status').textContent = '';
+      document.getElementById('reply-proofread-box').style.display = 'none';
+      const area = document.getElementById('reply-area');
+      area.style.display = 'block';
+      area.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('reply-body').focus();
+    }
+
+    async function sendReply() {
+      const to = document.getElementById('reply-to').value.trim();
+      const subject = document.getElementById('reply-subject').value.trim();
+      const body = document.getElementById('reply-body').value.trim();
+      const status = document.getElementById('reply-status');
+      if (!to || !subject || !body) { status.textContent = '全ての項目を入力してください'; return; }
+      status.textContent = '送信中...';
+      const res = await fetch('/api/emails/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, body }),
+      });
+      if (res.ok) {
+        status.textContent = '送信しました！';
+        document.getElementById('reply-body').value = '';
+      } else {
+        const err = await res.json();
+        status.textContent = `エラー: ${err.error}`;
+      }
+    }
+
+    async function saveReplyDraft() {
+      const to = document.getElementById('reply-to').value.trim();
+      const subject = document.getElementById('reply-subject').value.trim();
+      const body = document.getElementById('reply-body').value.trim();
+      const status = document.getElementById('reply-status');
+      status.textContent = '保存中...';
+      const res = await fetch('/api/drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, body }),
+      });
+      status.textContent = res.ok ? '下書きを保存しました' : '保存に失敗しました';
+    }
+
+    async function proofreadReply() {
+      const subject = document.getElementById('reply-subject').value.trim();
+      const body = document.getElementById('reply-body').value.trim();
+      if (!body) { document.getElementById('reply-status').textContent = '本文を入力してください'; return; }
+      const box = document.getElementById('reply-proofread-box');
+      const result = document.getElementById('reply-proofread-result');
+      box.style.display = 'block';
+      result.textContent = '推敲中...';
+      const res = await fetch('/api/proofread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, body }),
+      });
+      const data = await res.json();
+      result.textContent = res.ok ? data.result : `エラー: ${data.error}`;
+    }
+
+    function acceptReplyProofread() {
+      document.getElementById('reply-body').value = document.getElementById('reply-proofread-result').textContent;
+      document.getElementById('reply-proofread-box').style.display = 'none';
+    }
+
+    async function archiveEmail() {
+      if (!currentEmailId) return;
+      const res = await fetch(`/api/emails/${currentEmailId}/archive`, { method: 'POST' });
+      if (res.ok) {
+        document.querySelector(`.email-item[data-id="${currentEmailId}"]`)?.remove();
+        document.getElementById('modal').classList.remove('open');
+      }
+    }
+
+    async function trashEmail() {
+      if (!currentEmailId) return;
+      if (!confirm('このメールをゴミ箱に移動しますか？')) return;
+      const res = await fetch(`/api/emails/${currentEmailId}/trash`, { method: 'POST' });
+      if (res.ok) {
+        document.querySelector(`.email-item[data-id="${currentEmailId}"]`)?.remove();
+        document.getElementById('modal').classList.remove('open');
+      }
+    }
+
+    async function toggleRead() {
+      if (!currentEmailId) return;
+      const btn = document.getElementById('toggle-read-btn');
+      btn.disabled = true;
+      const res = await fetch(`/api/emails/${currentEmailId}/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unread: !currentEmailUnread }),
+      });
+      if (res.ok) {
+        currentEmailUnread = !currentEmailUnread;
+        btn.textContent = currentEmailUnread ? '既読にする' : '未読にする';
+        const item = document.querySelector(`.email-item[data-id="${currentEmailId}"]`);
+        if (item) item.classList.toggle('unread', currentEmailUnread);
+      }
+      btn.disabled = false;
     }
 
     function closeModal(e) {
       if (e.target === document.getElementById('modal')) {
         document.getElementById('modal').classList.remove('open');
+        document.getElementById('reply-area').style.display = 'none';
       }
     }
 
     async function loadEmails(limit) {
       document.getElementById('email-list').innerHTML = '読み込み中...';
-      const filter = document.querySelector('input[name="filter"]:checked')?.value || 'all';
+      const filter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
       const params = new URLSearchParams();
       if (limit) params.set('limit', limit);
       if (filter !== 'all') params.set('filter', filter);
@@ -474,6 +665,8 @@
       const emails = await res.json();
       renderEmails(emails, 'email-list');
       document.getElementById('show-all-btn').style.display = limit ? 'block' : 'none';
+      const unreadCount = emails.filter(e => e.unread).length;
+      document.title = unreadCount > 0 ? `(${unreadCount}) ねこちゃんのメールボックス` : 'ねこちゃんのメールボックス';
     }
 
     async function searchEmails() {
