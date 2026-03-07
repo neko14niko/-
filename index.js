@@ -43,6 +43,7 @@ const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 app.get('/auth', (req, res) => {
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
+    prompt: 'consent',
     scope: ['https://www.googleapis.com/auth/gmail.modify'],
   });
   res.redirect(url);

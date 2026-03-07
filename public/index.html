@@ -222,25 +222,21 @@
       position: fixed;
       top: 60px;
       right: 12px;
-      width: 400px;
+      width: clamp(150px, 28vw, 400px);
       background: rgba(255,255,255,0.92);
       backdrop-filter: blur(2px);
       border-radius: 8px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      padding: 24px;
+      padding: clamp(8px, 2vw, 24px);
       z-index: 10;
-      display: none;
     }
-    @media (min-width: 1360px) {
-      .cal-panel { display: block; }
-    }
-    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .cal-nav span { font-size: 26px; font-weight: bold; color: #ffb6c1; }
-    .cal-nav button { background: none; border: none; color: #ffb6c1; font-size: 32px; cursor: pointer; padding: 0 8px; }
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(6px, 1vw, 16px); }
+    .cal-nav span { font-size: clamp(13px, 1.8vw, 26px); font-weight: bold; color: #ffb6c1; }
+    .cal-nav button { background: none; border: none; color: #ffb6c1; font-size: clamp(16px, 2.2vw, 32px); cursor: pointer; padding: 0 4px; }
     .cal-nav button:hover { color: #ff9aaa; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-    .cal-dow { font-size: 20px; color: #aaa; padding: 4px 0; }
-    .cal-day { font-size: 24px; padding: 6px 0; border-radius: 50%; cursor: default; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+    .cal-dow { font-size: clamp(10px, 1.3vw, 20px); color: #aaa; padding: 2px 0; }
+    .cal-day { font-size: clamp(11px, 1.5vw, 24px); padding: clamp(2px, 0.5vw, 6px) 0; border-radius: 50%; cursor: default; }
     .cal-day.today { background: #ffb6c1; color: white; font-weight: bold; }
     .cal-day.empty { }
     .cal-day.sun { color: #ff9aaa; }
